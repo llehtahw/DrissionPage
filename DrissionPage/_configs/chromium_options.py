@@ -6,7 +6,7 @@
 @License  : BSD 3-Clause.
 """
 from pathlib import Path
-from re import search
+from re import search, sub
 
 from .options_manage import OptionsManager
 
@@ -336,7 +336,8 @@ class ChromiumOptions(object):
         return self
 
     def set_address(self, address):
-        address = address.replace('localhost', '127.0.0.1').lstrip('htps:/')
+        address = address.replace('localhost', '127.0.0.1')
+        address = sub(r'^https?://', '', address)
         self._address = address
         return self
 

@@ -77,7 +77,10 @@ class ChromiumBase(BasePage):
         self._is_reading = False
 
         if not target_id:
-            tabs = self.browser._driver.get(f'http://{self.browser.address}/json').json()
+            r = self.browser._driver.get(f'http://{self.browser.address}/json')
+            if r.status_code == 404:
+                r = self.browser._driver.get(f'http://{self.browser.address}/json/list')
+            tabs = r.json()
             tabs = [(i['id'], i['url']) for i in tabs
                     if i['type'] in ('page', 'webview') and not i['url'].startswith('devtools://')]
             dialog = None

@@ -12,6 +12,7 @@ from shutil import rmtree
 from subprocess import Popen, DEVNULL
 from tempfile import gettempdir
 from time import perf_counter, sleep
+from re import sub
 
 from requests import Session
 
@@ -22,7 +23,8 @@ from ..errors import BrowserConnectError
 
 
 def connect_browser(option):
-    address = option.address.replace('localhost', '127.0.0.1').lstrip('htps:/')
+    address = option.address.replace('localhost', '127.0.0.1')
+    address = sub(r'^https?://', '', address)
     browser_path = option.browser_path
 
     ip, port = address.split(':')
@@ -177,13 +179,17 @@ def test_connect(ip, port):
     while perf_counter() < end_time:
         try:
             r = s.get(f'http://{ip}:{port}/json', timeout=10, headers={'Connection': 'close'})
+            if r.status_code == 404:
+                r = s.get(f'http://{ip}:{port}/json/list', timeout=10, headers={'Connection': 'close'})
+            if r.status_code == 200:
+                return True
             for tab in r.json():
                 if tab['type'] in ('page', 'webview'):
                     r.close()
                     s.close()
                     return True
             r.close()
-        except Exception:
+        except Exception as e:
             sleep(.2)
 
     s.close()

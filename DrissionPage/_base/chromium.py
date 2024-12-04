@@ -167,7 +167,10 @@ class Chromium(object):
 
     @property
     def tab_ids(self):
-        j = self._driver.get(f'http://{self.address}/json').json()  # 不要改用cdp，因为顺序不对
+        r = self._driver.get(f'http://{self.address}/json')  # 不要改用cdp，因为顺序不对
+        if r.status_code == 404:
+            r = self._driver.get(f'http://{self.address}/json/list')
+        j = r.json()
         return [i['id'] for i in j if i['type'] in ('page', 'webview') and not i['url'].startswith('devtools://')]
 
     @property
@@ -332,7 +335,20 @@ class Chromium(object):
                 id_or_num = self.tab_ids[id_or_num - 1 if id_or_num > 0 else id_or_num]
             elif isinstance(id_or_num, ChromiumTab):
                 return id_or_num.tab_id if as_id else ChromiumTab(self, id_or_num.tab_id)
-            elif id_or_num not in [i['id'] for i in self._driver.get(f'http://{self.address}/json').json()]:
+            elif id_or_num not in [
+                i["id"]
+                for i in (
+                    (
+                        lambda r: (
+                            r.json()
+                            if r.status_code != 404
+                            else self._driver.get(
+                                f"http://{self.address}/json/list"
+                            ).json()
+                        )
+                    )(self._driver.get(f"http://{self.address}/json"))
+                )
+            ]:
                 raise ValueError(f'没有找到标签页{id_or_num}，所有标签页：{self.tab_ids}')
 
         elif title == url is None and tab_type == 'page':
@@ -351,7 +367,10 @@ class Chromium(object):
             return MixTab(self, id_or_num) if mix else ChromiumTab(self, id_or_num)
 
     def _get_tabs(self, title=None, url=None, tab_type='page', mix=True, as_id=False):
-        tabs = self._driver.get(f'http://{self.address}/json').json()  # 不要改用cdp
+        r = self._driver.get(f'http://{self.address}/json')  # 不要改用cdp
+        if r.status_code == 404:
+            r = self._driver.get(f'http://{self.address}/json/list')
+        tabs = r.json()  # 不要改用cdp
 
         if isinstance(tab_type, str):
             tab_type = {tab_type}
